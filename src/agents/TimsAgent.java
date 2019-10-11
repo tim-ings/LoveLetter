@@ -10,9 +10,9 @@ import java.util.Random;
  */
 public class TimsAgent implements Agent {
 
-	private final float BARRON_MIN_CHANCE = 0.6f;
-	private final float GUARD_MIN_CHANCE = 0.6f;
-	private final float KING_MIN_CHANCE = 0.6f;
+	private final float BARRON_MIN_CHANCE = 0.5f;
+	private final float GUARD_MIN_CHANCE = 0.5f;
+	private final float KING_MIN_CHANCE = 0.5f;
 
 	private final Card[] CARD_VALUES = Card.values();
 	private final int UNIQUE_CARD_COUNT = 8;
@@ -21,11 +21,6 @@ public class TimsAgent implements Agent {
 	private Random rand;
 	private State current;
 	private int myIndex;
-
-	private class CardState {
-		public Card card;
-		public float chance;
-	}
 
 	private class WeightedAction {
 		public Action action;
@@ -96,6 +91,25 @@ public class TimsAgent implements Agent {
 				}
 			}
 			return CARD_VALUES[maxProbIndex];
+		}
+
+		/**
+		 * Returns the chance of the most likely card the player has
+		 * 
+		 * @return
+		 */
+		public float getMostLikelyChance() {
+			float maxProb = -Float.MAX_VALUE;
+			int maxProbIndex = 0;
+			for (int i = 0; i < potentialCardCount.length; i++) {
+				float prob = potentialCardCount[i] / CARD_VALUES[i].count();
+				// >= means the higher value card is always chosen
+				if (prob >= maxProb) {
+					maxProb = prob;
+					maxProbIndex = i;
+				}
+			}
+			return maxProb;
 		}
 	}
 
@@ -518,25 +532,30 @@ public class TimsAgent implements Agent {
 	}
 
 	private WeightedAction decideActionVsPlayer(PlayerState opp, Card hand, Card dealt) {
+		if (current.eliminated(opp.playerIndex)) {
+			// eliminated players have minimum weight
+			return new WeightedAction(-Float.MAX_VALUE, null);
+		}
 		try {
 			Card mostLikely = opp.getMostLikely();
+			int weight = mostLikely.value();
 			switch (mostLikely) {
 			case GUARD:
-				return new WeightedAction(mostLikely.value(), decideGuard(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
+				return new WeightedAction(weight, decideGuard(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case PRIEST:
-				return new WeightedAction(mostLikely.value(), decidePriest(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
+				return new WeightedAction(weight, decidePriest(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case BARON:
-				return new WeightedAction(mostLikely.value(), decideBaron(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
+				return new WeightedAction(weight, decideBaron(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case HANDMAID:
-				return new WeightedAction(mostLikely.value(), decideHandmaiden(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
+				return new WeightedAction(weight, decideHandmaiden(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case PRINCE:
-				return new WeightedAction(mostLikely.value(), decidePrince(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
+				return new WeightedAction(weight, decidePrince(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case KING:
-				return new WeightedAction(mostLikely.value(), decideKing(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
+				return new WeightedAction(weight, decideKing(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case COUNTESS:
-				return new WeightedAction(mostLikely.value(), decideCountess(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
+				return new WeightedAction(weight, decideCountess(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case PRINCESS:
-				return new WeightedAction(mostLikely.value(), decidePrincess(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
+				return new WeightedAction(weight, decidePrincess(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			}
 		} catch (IllegalActionException e) {
 			// TODO Auto-generated catch block
@@ -545,53 +564,88 @@ public class TimsAgent implements Agent {
 		return null;
 	}
 
-	private Action decideActionSelf(Card hand, Card dealt) {
-		try {
-			if (hasCard(Card.HANDMAID, hand, dealt)) {
-				return Action.playHandmaid(myIndex);
-			}
-			if (hasCard(Card.PRIEST, hand, dealt)) {
-				return Action.playPriest(myIndex, rand.nextInt(current.numPlayers())); // TODO: should get the player we know the least about or highest threat
-			}
-
-			Action act = null;
-			Card play = null;
-			while (!current.legalAction(act, play)) {
-				// default to a random action if we have to
-				play = rand.nextDouble() < 0.5 ? hand : dealt;
-				int target = rand.nextInt(current.numPlayers());
-				switch (play) {
-				case GUARD:
-					act = Action.playGuard(myIndex, target, Card.values()[rand.nextInt(7) + 1]);
-					break;
-				case PRIEST:
-					act = Action.playPriest(myIndex, target);
-					break;
-				case BARON:
-					act = Action.playBaron(myIndex, target);
-					break;
-				case HANDMAID:
-					act = Action.playHandmaid(myIndex);
-					break;
-				case PRINCE:
-					act = Action.playPrince(myIndex, target);
-					break;
-				case KING:
-					act = Action.playKing(myIndex, target);
-					break;
-				case COUNTESS:
-					act = Action.playCountess(myIndex);
-					break;
-				default:
-					return null;// never play princess
+	private int getPirestTarget() {
+		float maxChance = -Float.MAX_VALUE;
+		int maxChanceIndex = 0;
+		for (int i = 0; i < current.numPlayers(); i++) {
+			if (i != myIndex) {
+				PlayerState ps = playerStates[i];
+				float c = ps.getMostLikelyChance();
+				if (c > maxChance) {
+					maxChance = c;
+					maxChanceIndex = i;
 				}
 			}
-
-		} catch (IllegalActionException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
-		return null;
+		return maxChanceIndex;
+	}
+	
+	private Card guardGuessFromRemaining() {
+		Card guess = Card.GUARD;
+		while (guess == Card.GUARD) {
+			int ccIndex = rand.nextInt(cardCounts.length);
+			if (cardCounts[ccIndex] > 0) {
+				guess = CARD_VALUES[ccIndex];
+			}
+		}
+		return guess;
+	}
+
+	private Action decideActionSelf(Card hand, Card dealt) throws IllegalActionException {
+		if (hasCard(Card.HANDMAID, hand, dealt)) {
+			return Action.playHandmaid(myIndex);
+		}
+		if (hasCard(Card.PRIEST, hand, dealt)) {
+			int target = getPirestTarget();
+			while (target == myIndex) { // just pick a random player if we somehow pick ourselves
+				target = rand.nextInt(current.numPlayers());
+			}
+			return Action.playPriest(myIndex, target); // get the player we know the least about. Should this be highest threat
+																	// instead?
+		}
+
+		Action act = null;
+		Card play = null;
+		while (!current.legalAction(act, play) || act == null) {
+			// default to a random action if we have to
+			play = rand.nextDouble() < 0.5 ? hand : dealt;
+			// dont target ourselves
+			int target = rand.nextInt(current.numPlayers());
+			while (target == myIndex) {
+				target = rand.nextInt(current.numPlayers());
+			}
+			switch (play) {
+			case GUARD:
+				Card guess = playerStates[target].getMostLikely();
+				// we cannot guess guard so pick a random guess
+				while (guess == Card.GUARD) {
+					guess = guardGuessFromRemaining();
+				}
+				act = Action.playGuard(myIndex, target, guess);
+				break;
+			case PRIEST:
+				act = Action.playPriest(myIndex, target); // shouldnt get here
+				break;
+			case BARON:
+				act = Action.playBaron(myIndex, target);
+				break;
+			case HANDMAID:
+				act = Action.playHandmaid(myIndex); // shouldnt get here
+				break;
+			case PRINCE:
+				act = Action.playPrince(myIndex, target);
+				break;
+			case KING:
+				act = Action.playKing(myIndex, target);
+				break;
+			case COUNTESS:
+				act = Action.playCountess(myIndex);
+				break;
+			default:
+				act = null;// never play princess
+			}
+		}
+		return act;
 	}
 
 	/**
@@ -619,7 +673,15 @@ public class TimsAgent implements Agent {
 		// aggressive
 		// TODO: we could consider self actions too
 		if (bestAction == null) {
-			bestAction = decideActionSelf(hand, dealt);
+			try {
+				bestAction = decideActionSelf(hand, dealt);
+			} catch (IllegalActionException e) {
+				System.out.println("We shouldnt be here");
+			}
+		}
+
+		if (bestAction == null) {
+			System.out.println("We shouldnt be here");
 		}
 
 		return bestAction;

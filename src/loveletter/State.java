@@ -461,6 +461,7 @@ public class State implements Cloneable{
    * **/
   public int gameWinner(){
     int threshold = num==4?4:num==3?5:num==2?7:0;//sets the required threshhold for different numbers of players.
+    //threshold = 10000;
     for(int p = 0; p<num; p++)
       if(scores[p]==threshold)return p;
     return -1;

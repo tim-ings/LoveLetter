@@ -53,24 +53,19 @@ public class LoveLetter{
           agents[i].newRound(playerStates[i]);
         }
         while(!gameState.roundOver()){
-System.out.println("Cards are:\nplayer 0:"+gameState.getCard(0)+"\nplayer 1:"+gameState.getCard(1)+"\nplayer 2:"+gameState.getCard(2)+"\nplayer 3:"+gameState.getCard(3));        
           Card topCard = gameState.drawCard(); 
-System.out.println("Player "+gameState.nextPlayer()+" draws the "+topCard);
           Action act = agents[gameState.nextPlayer()].playCard(topCard);
           try{
-            ps.println(gameState.update(act,topCard));
+            gameState.update(act,topCard);
           }
           catch(IllegalActionException e){
-            ps.println("ILLEGAL ACTION PERFORMED BY PLAYER "+agents[gameState.nextPlayer()]+
-              "("+gameState.nextPlayer()+")\nRandom Move Substituted");
             rando.newRound(gameState.playerState(gameState.nextPlayer()));
             act = rando.playCard(topCard);
-            ps.println(gameState.update(act,topCard));
+            gameState.update(act,topCard);
           }
           for(int p = 0; p<numPlayers; p++)
             agents[p].see(act,playerStates[p]);
         }
-System.out.println("New Round, scores are:\nplayer 0:"+gameState.score(0)+"\nplayer 1:"+gameState.score(1)+"\nplayer 2:"+gameState.score(2)+"\nplayer 3:"+gameState.score(3));        
         gameState.newRound();
       }
       ps.println("Player "+gameState.gameWinner()+" wins the Princess's heart!");
@@ -78,7 +73,7 @@ System.out.println("New Round, scores are:\nplayer 0:"+gameState.score(0)+"\npla
       for(int p = 0; p<numPlayers; p++)scoreboard[p] = gameState.score(p);
       return scoreboard;
     }catch(IllegalActionException e){
-      ps.println("Something has gone wrong.");
+      //ps.println("Something has gone wrong.");
       e.printStackTrace();
       return null;
     } 
@@ -89,7 +84,7 @@ System.out.println("New Round, scores are:\nplayer 0:"+gameState.score(0)+"\npla
    * The agent implementations should be in the default package.
    * */
   public static void main(String[] args){
-    Agent[] agents = {new agents.TimsAgent(), new agents.RandomAgent(), new agents.BorkedAgent(), new agents.BorkedAgent()};
+    Agent[] agents = {new agents.TimsAgent(),new agents.RandomAgent(), new agents.RandomAgent(), new agents.RandomAgent()};
     LoveLetter env = new LoveLetter();
     StringBuffer log = new StringBuffer("A simple game for four random agents:\n");
     int[] results = env.playGame(agents);
