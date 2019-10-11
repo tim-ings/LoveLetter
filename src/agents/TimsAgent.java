@@ -100,13 +100,11 @@ public class TimsAgent implements Agent {
 		 */
 		public float getMostLikelyChance() {
 			float maxProb = -Float.MAX_VALUE;
-			int maxProbIndex = 0;
 			for (int i = 0; i < potentialCardCount.length; i++) {
 				float prob = potentialCardCount[i] / CARD_VALUES[i].count();
 				// >= means the higher value card is always chosen
 				if (prob >= maxProb) {
 					maxProb = prob;
-					maxProbIndex = i;
 				}
 			}
 			return maxProb;
@@ -657,14 +655,22 @@ public class TimsAgent implements Agent {
 	 */
 	public Action playCard(Card dealt) {
 		Card hand = current.getCard(myIndex);
-		WeightedAction[] actionVsPlayers = new WeightedAction[current.numPlayers()];
 		Action bestAction = null;
 		float bestWeight = -Float.MAX_VALUE;
 		for (int i = 0; i < current.numPlayers(); i++) {
 			if (i != myIndex) {
-				actionVsPlayers[i] = decideActionVsPlayer(playerStates[i], hand, dealt);
-				if (bestAction == null || bestWeight < actionVsPlayers[i].weight) {
-					bestAction = actionVsPlayers[i].action;
+				WeightedAction newAction = decideActionVsPlayer(playerStates[i], hand, dealt);
+				if (newAction != null && newAction.action != null && bestAction == null) {
+					bestAction = newAction.action;
+				} else if (newAction != null && newAction.action != null && bestWeight == newAction.weight) {
+					int bestActionThreat = playerStates[bestAction.target()].threat;
+					int newActionThreat = playerStates[newAction.action.target()].threat;
+					if (newActionThreat > bestActionThreat) {
+						bestAction = newAction.action;
+					}
+				} else if (newAction != null && newAction.action != null && newAction.weight > bestWeight) {
+					bestAction = newAction.action;
+					bestWeight = newAction.weight;
 				}
 			}
 		}
