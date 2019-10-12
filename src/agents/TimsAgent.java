@@ -73,7 +73,8 @@ public class TimsAgent implements Agent {
 		 * @return The probability Card c is in the given players hand
 		 */
 		public float getProb(Card c) {
-			return potentialCardCount[c.ordinal()] / CARD_VALUES.length;
+			int i = c.ordinal();
+			return (float)potentialCardCount[i] / (float)CARD_VALUES[i].count();
 		}
 
 		/**
@@ -88,7 +89,7 @@ public class TimsAgent implements Agent {
 			float maxProb = -Float.MAX_VALUE;
 			int maxProbIndex = 0;
 			for (int i = 0; i < potentialCardCount.length; i++) {
-				float prob = potentialCardCount[i] / CARD_VALUES[i].count();
+				float prob = (float)potentialCardCount[i] / (float)CARD_VALUES[i].count();
 				// >= means the higher value card is always chosen
 				if (prob >= maxProb) {
 					maxProb = prob;
@@ -576,7 +577,8 @@ public class TimsAgent implements Agent {
 		}
 		try {
 			Card mostLikely = opp.getMostLikely();
-			int weight = mostLikely.value();
+			float weight = mostLikely.value();
+			weight *= (float)opp.getMostLikelyChance();
 			switch (mostLikely) {
 			case GUARD:
 				return new WeightedAction(weight, decideGuard(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
