@@ -71,7 +71,8 @@ public class LoveLetter {
 				}
 				gameState.newRound();
 			}
-			//ps.println("Player " + gameState.gameWinner() + " wins the Princess's heart!");
+			// ps.println("Player " + gameState.gameWinner() + " wins the Princess's
+			// heart!");
 			int[] scoreboard = new int[numPlayers];
 			for (int p = 0; p < numPlayers; p++)
 				scoreboard[p] = gameState.score(p);
@@ -95,16 +96,21 @@ public class LoveLetter {
 			testCount = Integer.parseInt(args[0]);
 		}
 		int timWins = 0; // keep track of how many times my AI wins
+		int[] winCounts = new int[4];
 		for (int j = 0; j < testCount; j++) {
-			int timIndex = rand.nextInt(4); // randomise the position my AI is in every game
-			Agent[] agents = new Agent[4];
-			for (int i = 0; i < 4; i++) {
-				if (i == timIndex) {
-					agents[i] = new agents.TimsAgent();
-				} else {
-					agents[i] = new agents.RandomAgent();
-				}
-			}
+//			int timIndex = rand.nextInt(4); // randomise the position my AI is in every game
+//			Agent[] agents = new Agent[4];
+//			for (int i = 0; i < 4; i++) {
+//				if (i == timIndex) {
+//					agents[i] = new agents.TimsAgent();
+//				} else {
+//					agents[i] = new agents.RandomAgent();
+//				}
+//			}
+			int timIndex = 3;
+			Agent[] agents = { new agents.RandomAgent(),new agents.RandomAgent(),new agents.RandomAgent(),new agents.TimsAgent() };
+//			Agent[] agents = { new agents.RandomAgent(),new agents.TimsAgent() };
+//			Agent[] agents = { new agents.TimsAgent(), new agents.TimsAgent() };
 			LoveLetter env = new LoveLetter();
 			int[] results = env.playGame(agents);
 			int maxScoreIndex = 0;
@@ -118,8 +124,22 @@ public class LoveLetter {
 			if (maxScoreIndex == timIndex) {
 				timWins++;
 			}
+			winCounts[maxScoreIndex]++;
 		}
-		float winRate = (float)timWins / (float)testCount * 100;
-		System.out.printf("Tim won %.1f%% of the time. Random chance is 25.0%%", winRate);
+		float winRate = (float) timWins / (float) testCount * 100;
+		System.out.printf("Tim won %.1f%% of the time. Random chance is 25.0%%\n", winRate);
+		
+		for (int i = 0; i < 4; i++)
+			System.out.printf("\t Agent " + i + ", \"" + i + "\":\t " + winCounts[i] + "\n");
 	}
 }
+
+
+
+
+
+
+
+
+
+

@@ -10,9 +10,9 @@ import java.util.Random;
  */
 public class TimsAgent implements Agent {
 
-	private final float BARRON_MIN_CHANCE = 0.0f;
-	private final float GUARD_MIN_CHANCE = 0.0f;
-	private final float KING_MIN_CHANCE = 0.0f;
+	private final float BARRON_MIN_CHANCE = 0.5f;
+	private final float GUARD_MIN_CHANCE = 0.5f;
+	private final float KING_MIN_CHANCE = 0.5f;
 
 	private final Card[] CARD_VALUES = Card.values();
 	private final int UNIQUE_CARD_COUNT = 8;
