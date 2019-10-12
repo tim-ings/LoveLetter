@@ -37,6 +37,8 @@ public class TimsAgent implements Agent {
 		public final int playerIndex;
 		// this increases as this player targets us, used as a tie breaker
 		public int threat = 0;
+		// priest, etc
+		public Card knownCard = null;
 
 		/**
 		 * Constructs a new player state object
@@ -80,6 +82,9 @@ public class TimsAgent implements Agent {
 		 * @return
 		 */
 		public Card getMostLikely() {
+			if (knownCard != null) {
+				return knownCard;
+			}
 			float maxProb = -Float.MAX_VALUE;
 			int maxProbIndex = 0;
 			for (int i = 0; i < potentialCardCount.length; i++) {
@@ -99,6 +104,9 @@ public class TimsAgent implements Agent {
 		 * @return
 		 */
 		public float getMostLikelyChance() {
+			if (knownCard != null) {
+				return 1;
+			}
 			float maxProb = -Float.MAX_VALUE;
 			for (int i = 0; i < potentialCardCount.length; i++) {
 				float prob = potentialCardCount[i] / CARD_VALUES[i].count();
@@ -168,6 +176,19 @@ public class TimsAgent implements Agent {
 		current = results;
 		cardCounts[act.card().ordinal()]--;
 		updatePlayerStates(act);
+		// when we play the priest
+		if (act.card() == Card.PRIEST && act.player() == myIndex) {
+			Card oppCard = results.getCard(act.target());
+			playerStates[act.target()].knownCard = oppCard;
+		}
+		// when a player with a knownCard plays that card we need to set their knownCard
+		// to null
+		for (int i = 0; i < current.numPlayers(); i++) {
+			if (i != myIndex && playerStates[i].knownCard != null && act.player() == i
+					&& act.card() == playerStates[i].knownCard) {
+				playerStates[i].knownCard = null;
+			}
+		}
 	}
 
 	private boolean hasCard(Card c, Card c1, Card c2) {
@@ -204,19 +225,22 @@ public class TimsAgent implements Agent {
 	private Action decideGuard(int target, Card hand, Card dealt, float prob) throws IllegalActionException {
 		// @formatter:off
 		// Outcomes:
-		// GUARD 	IGNORED 	we cannot guess guard
-		// PRIEST 	IGNORED 	must look at broader game to find best target
-		// BARON 	POSSIBLE  	we should only attempt this if we are confident enough we have a higher value card
-		// HANDMAID IGNORED 	self targeted only
-		// PRINCE 	IGNORED 	guard is a low value card, TODO: but it is powerful maybe worth discarding it here
-		// KING 	IGNORED	 	this is suicide
-		// COUNTESS IGNORED 	we should avoid playing the countess
-		// PRINCESS IGNORED		this is suicide
-		// NULL 	IGNORED
+		// GUARD IGNORED we cannot guess guard
+		// PRIEST IGNORED must look at broader game to find best target
+		// BARON POSSIBLE we should only attempt this if we are confident enough we have
+		// a higher value card
+		// HANDMAID IGNORED self targeted only
+		// PRINCE IGNORED guard is a low value card, TODO: but it is powerful maybe
+		// worth discarding it here
+		// KING IGNORED this is suicide
+		// COUNTESS IGNORED we should avoid playing the countess
+		// PRINCESS IGNORED this is suicide
+		// NULL IGNORED
 		// @formatter:on
 
 		// use our baron
-		if (prob > BARRON_MIN_CHANCE && hasCard(Card.BARON, hand, dealt) && maxValue(hand, dealt) >= Card.GUARD.value()) {
+		if (prob > BARRON_MIN_CHANCE && hasCard(Card.BARON, hand, dealt)
+				&& maxValue(hand, dealt) >= Card.GUARD.value()) {
 			return Action.playBaron(myIndex, target);
 		}
 
@@ -236,15 +260,17 @@ public class TimsAgent implements Agent {
 	private Action decidePriest(int target, Card hand, Card dealt, float prob) throws IllegalActionException {
 		// @formatter:off
 		// Outcomes:
-		// GUARD 	POSSIBLE 	we should guess priest
-		// PRIEST 	IGNORED 	must look at broader game to find best target
-		// BARON 	POSSIBLE  	we should only attempt this if we are confident enough we have a higher value card
-		// HANDMAID IGNORED 	self targeted only
-		// PRINCE 	POSSIBLE 	we should make them discard if they are likely to lower their value
-		// KING 	IGNORED	 	this is suicide
-		// COUNTESS IGNORED 	we should avoid playing the countess
-		// PRINCESS IGNORED		this is suicide
-		// NULL 	IGNORED
+		// GUARD POSSIBLE we should guess priest
+		// PRIEST IGNORED must look at broader game to find best target
+		// BARON POSSIBLE we should only attempt this if we are confident enough we have
+		// a higher value card
+		// HANDMAID IGNORED self targeted only
+		// PRINCE POSSIBLE we should make them discard if they are likely to lower their
+		// value
+		// KING IGNORED this is suicide
+		// COUNTESS IGNORED we should avoid playing the countess
+		// PRINCESS IGNORED this is suicide
+		// NULL IGNORED
 		// @formatter:on
 
 		// use the low value guard to discard their baron if we are sure enough
@@ -252,7 +278,8 @@ public class TimsAgent implements Agent {
 			return Action.playGuard(myIndex, target, Card.PRIEST);
 		}
 		// use our baron
-		if (prob > BARRON_MIN_CHANCE && hasCard(Card.BARON, hand, dealt) && maxValue(hand, dealt) >= Card.PRIEST.value()) {
+		if (prob > BARRON_MIN_CHANCE && hasCard(Card.BARON, hand, dealt)
+				&& maxValue(hand, dealt) >= Card.PRIEST.value()) {
 			return Action.playBaron(myIndex, target);
 		}
 		// use our prince
@@ -276,15 +303,16 @@ public class TimsAgent implements Agent {
 	private Action decideBaron(int target, Card hand, Card dealt, float prob) throws IllegalActionException {
 		// @formatter:off
 		// Outcomes:
-		// GUARD 	POSSIBLE 	we should guess baron
-		// PRIEST 	IGNORED 	must look at broader game to find best target
-		// BARON 	IGNROED  	this is a bad idea, best we can do is draw
-		// HANDMAID IGNORED 	self targeted only
-		// PRINCE 	POSSIBLE 	we should make them discard if they are likely to lower their value
-		// KING 	IGNORED	 	this is suicide
-		// COUNTESS IGNORED 	we should avoid playing the countess
-		// PRINCESS IGNORED		this is suicide
-		// NULL 	IGNORED
+		// GUARD POSSIBLE we should guess baron
+		// PRIEST IGNORED must look at broader game to find best target
+		// BARON IGNROED this is a bad idea, best we can do is draw
+		// HANDMAID IGNORED self targeted only
+		// PRINCE POSSIBLE we should make them discard if they are likely to lower their
+		// value
+		// KING IGNORED this is suicide
+		// COUNTESS IGNORED we should avoid playing the countess
+		// PRINCESS IGNORED this is suicide
+		// NULL IGNORED
 		// @formatter:on
 
 		// use the low value guard to discard their baron if we are sure enough
@@ -312,15 +340,17 @@ public class TimsAgent implements Agent {
 	private Action decideHandmaiden(int target, Card hand, Card dealt, float prob) throws IllegalActionException {
 		// @formatter:off
 		// Outcomes:
-		// GUARD 	POSSIBLE 	we should guess handmaiden
-		// PRIEST 	IGNORED 	must look at broader game to find best target
-		// BARON 	POSSIBLE 	we should only attempt this if we are confident enough we have a higher value card
-		// HANDMAID IGNORED 	self targeted only
-		// PRINCE 	POSSIBLE 	we should make them discard if they are likely to lower their value
-		// KING 	POSSIBLE	we should swap for the handmaiden
-		// COUNTESS IGNORED 	we should avoid playing the countess
-		// PRINCESS IGNORED		this is suicide
-		// NULL 	IGNORED
+		// GUARD POSSIBLE we should guess handmaiden
+		// PRIEST IGNORED must look at broader game to find best target
+		// BARON POSSIBLE we should only attempt this if we are confident enough we have
+		// a higher value card
+		// HANDMAID IGNORED self targeted only
+		// PRINCE POSSIBLE we should make them discard if they are likely to lower their
+		// value
+		// KING POSSIBLE we should swap for the handmaiden
+		// COUNTESS IGNORED we should avoid playing the countess
+		// PRINCESS IGNORED this is suicide
+		// NULL IGNORED
 		// @formatter:on
 
 		// try and get the handmaiden for ourselves
@@ -332,7 +362,8 @@ public class TimsAgent implements Agent {
 			return Action.playGuard(myIndex, target, Card.HANDMAID);
 		}
 		// use our baron
-		if (prob > BARRON_MIN_CHANCE && hasCard(Card.BARON, hand, dealt) && maxValue(hand, dealt) >= Card.HANDMAID.value()) {
+		if (prob > BARRON_MIN_CHANCE && hasCard(Card.BARON, hand, dealt)
+				&& maxValue(hand, dealt) >= Card.HANDMAID.value()) {
 			return Action.playBaron(myIndex, target);
 		}
 		// use our prince
@@ -356,15 +387,17 @@ public class TimsAgent implements Agent {
 	private Action decidePrince(int target, Card hand, Card dealt, float prob) throws IllegalActionException {
 		// @formatter:off
 		// Outcomes:
-		// GUARD 	POSSIBLE 	we should guess prince
-		// PRIEST 	IGNORED 	must look at broader game to find best target
-		// BARON 	POSSIBLE 	we should only attempt this if we are confident enough we have a higher value card
-		// HANDMAID IGNORED 	self targeted only
-		// PRINCE 	POSSIBLE 	we should make them discard if they are likely to lower their value
-		// KING 	IGNORED 	this is suicide
-		// COUNTESS IGNORED 	we should avoid playing the countess
-		// PRINCESS IGNORED		this is suicide
-		// NULL 	IGNORED
+		// GUARD POSSIBLE we should guess prince
+		// PRIEST IGNORED must look at broader game to find best target
+		// BARON POSSIBLE we should only attempt this if we are confident enough we have
+		// a higher value card
+		// HANDMAID IGNORED self targeted only
+		// PRINCE POSSIBLE we should make them discard if they are likely to lower their
+		// value
+		// KING IGNORED this is suicide
+		// COUNTESS IGNORED we should avoid playing the countess
+		// PRINCESS IGNORED this is suicide
+		// NULL IGNORED
 		// @formatter:on
 
 		// use the low value guard to discard their prince if we are sure enough
@@ -372,7 +405,8 @@ public class TimsAgent implements Agent {
 			return Action.playGuard(myIndex, target, Card.PRINCE);
 		}
 		// use our baron
-		if (prob > BARRON_MIN_CHANCE && hasCard(Card.BARON, hand, dealt) && maxValue(hand, dealt) >= Card.PRINCE.value()) {
+		if (prob > BARRON_MIN_CHANCE && hasCard(Card.BARON, hand, dealt)
+				&& maxValue(hand, dealt) >= Card.PRINCE.value()) {
 			return Action.playBaron(myIndex, target);
 		}
 		// use our prince
@@ -395,15 +429,17 @@ public class TimsAgent implements Agent {
 	private Action decideKing(int target, Card hand, Card dealt, float prob) throws IllegalActionException {
 		// @formatter:off
 		// Outcomes:
-		// GUARD 	POSSIBLE 	we should guess king
-		// PRIEST 	IGNORED 	must look at broader game to find best target
-		// BARON 	POSSIBLE 	we should only attempt this if we are confident enough we have a higher value card
-		// HANDMAID IGNORED 	self targeted only
-		// PRINCE 	POSSIBLE 	we should make them discard if they are likely to lower their value
-		// KING 	IMPOSSIBLE 	there is only 1 king
-		// COUNTESS IGNORED 	we should avoid playing the countess
-		// PRINCESS IGNORED		this is suicide
-		// NULL 	IGNORED
+		// GUARD POSSIBLE we should guess king
+		// PRIEST IGNORED must look at broader game to find best target
+		// BARON POSSIBLE we should only attempt this if we are confident enough we have
+		// a higher value card
+		// HANDMAID IGNORED self targeted only
+		// PRINCE POSSIBLE we should make them discard if they are likely to lower their
+		// value
+		// KING IMPOSSIBLE there is only 1 king
+		// COUNTESS IGNORED we should avoid playing the countess
+		// PRINCESS IGNORED this is suicide
+		// NULL IGNORED
 		// @formatter:on
 
 		// use the low value guard to discard their king if we are sure enough
@@ -411,7 +447,8 @@ public class TimsAgent implements Agent {
 			return Action.playGuard(myIndex, target, Card.KING);
 		}
 		// use our baron
-		if (prob > BARRON_MIN_CHANCE && hasCard(Card.BARON, hand, dealt) && maxValue(hand, dealt) >= Card.KING.value()) {
+		if (prob > BARRON_MIN_CHANCE && hasCard(Card.BARON, hand, dealt)
+				&& maxValue(hand, dealt) >= Card.KING.value()) {
 			return Action.playBaron(myIndex, target);
 		}
 		// use our prince
@@ -434,15 +471,17 @@ public class TimsAgent implements Agent {
 	private Action decideCountess(int target, Card hand, Card dealt, float prob) throws IllegalActionException {
 		// @formatter:off
 		// Outcomes:
-		// GUARD 	POSSIBLE 	we should guess countess
-		// PRIEST 	IGNORED 	must look at broader game to find best target
-		// BARON 	POSSIBLE 	we should only play baron if we have a higher value card
-		// HANDMAID IGNORED 	self targeted only
-		// PRINCE 	POSSIBLE 	we should make them discard if they are likely to lower their value
-		// KING 	POSSIBLE 	we should swap if our card is lower value than theirs
-		// COUNTESS IMPOSSIBLE 	there is only 1 countess
-		// PRINCESS IGNORED 	this is suicide
-		// NULL 	POSSIBLE 	no point attacking a player who is forced to play a high value card
+		// GUARD POSSIBLE we should guess countess
+		// PRIEST IGNORED must look at broader game to find best target
+		// BARON POSSIBLE we should only play baron if we have a higher value card
+		// HANDMAID IGNORED self targeted only
+		// PRINCE POSSIBLE we should make them discard if they are likely to lower their
+		// value
+		// KING POSSIBLE we should swap if our card is lower value than theirs
+		// COUNTESS IMPOSSIBLE there is only 1 countess
+		// PRINCESS IGNORED this is suicide
+		// NULL POSSIBLE no point attacking a player who is forced to play a high value
+		// card
 		// @formatter:on
 
 		// how many cards can still be dealt with a value greater than 4?
@@ -453,7 +492,8 @@ public class TimsAgent implements Agent {
 		}
 		// how many cards can still be dealt with a value less than or equal to 4?
 		int highCount = 0;
-		for (int i = 4; i < cardCounts.length; i++) { // starting point of 4 is the index of prince (NOT VALUE), the first card to
+		for (int i = 4; i < cardCounts.length; i++) { // starting point of 4 is the index of prince (NOT VALUE), the
+														// first card to
 														// have value over 4
 			highCount += cardCounts[i];
 		}
@@ -500,15 +540,15 @@ public class TimsAgent implements Agent {
 	private Action decidePrincess(int target, Card hand, Card dealt, float prob) throws IllegalActionException {
 		// @formatter:off
 		// Outcomes:
-		// GUARD 	POSSIBLE 	we should guess princess
-		// PRIEST 	IGNORED 	must look at broader game to find best target
-		// BARON 	IGNORED 	this is suicide, only 1 princess in the game
-		// HANDMAID IGNORED 	self targeted only
-		// PRINCE 	POSSIBLE 	we should make them discard
-		// KING 	POSSIBLE 	we should swap
-		// COUNTESS IGNORED 	we should avoid playing the countess
-		// PRINCESS IMPOSSIBLE	there is only 1 princess
-		// NULL 	IGNORED 	we need to do something, this player will win if left alone
+		// GUARD POSSIBLE we should guess princess
+		// PRIEST IGNORED must look at broader game to find best target
+		// BARON IGNORED this is suicide, only 1 princess in the game
+		// HANDMAID IGNORED self targeted only
+		// PRINCE POSSIBLE we should make them discard
+		// KING POSSIBLE we should swap
+		// COUNTESS IGNORED we should avoid playing the countess
+		// PRINCESS IMPOSSIBLE there is only 1 princess
+		// NULL IGNORED we need to do something, this player will win if left alone
 		// @formatter:on
 
 		// take the princess card if we can
@@ -545,15 +585,18 @@ public class TimsAgent implements Agent {
 			case BARON:
 				return new WeightedAction(weight, decideBaron(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case HANDMAID:
-				return new WeightedAction(weight, decideHandmaiden(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
+				return new WeightedAction(weight,
+						decideHandmaiden(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case PRINCE:
 				return new WeightedAction(weight, decidePrince(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case KING:
 				return new WeightedAction(weight, decideKing(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case COUNTESS:
-				return new WeightedAction(weight, decideCountess(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
+				return new WeightedAction(weight,
+						decideCountess(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			case PRINCESS:
-				return new WeightedAction(weight, decidePrincess(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
+				return new WeightedAction(weight,
+						decidePrincess(opp.playerIndex, hand, dealt, opp.getProb(mostLikely)));
 			}
 		} catch (IllegalActionException e) {
 			// TODO Auto-generated catch block
@@ -577,7 +620,7 @@ public class TimsAgent implements Agent {
 		}
 		return maxChanceIndex;
 	}
-	
+
 	private Card guardGuessFromRemaining() {
 		Card guess = Card.GUARD;
 		while (guess == Card.GUARD) {
@@ -598,8 +641,9 @@ public class TimsAgent implements Agent {
 			while (target == myIndex) { // just pick a random player if we somehow pick ourselves
 				target = rand.nextInt(current.numPlayers());
 			}
-			return Action.playPriest(myIndex, target); // get the player we know the least about. Should this be highest threat
-																	// instead?
+			return Action.playPriest(myIndex, target); // get the player we know the least about. Should this be highest
+														// threat
+														// instead?
 		}
 
 		Action act = null;
