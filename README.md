@@ -12,4 +12,4 @@ Simply compile from the command line with `javac` and run with `java`
     mkdir bin/ && javac -d bin/ src/*/*.java
     java -cp bin/ loveletter.LoveLetter <gamecount>
 
-Where \<gamecount> is an integer represeting the number of games to be played
+Where \<gamecount> is an integer represeting the number of games to be played (defaults to `1` if omitted)
