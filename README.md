@@ -2,10 +2,12 @@
 
 ## Instructions
 
-Either open this project in Eclipse using provided .project file
+Either open this project in Eclipse using provided .project file and run
 
 OR 
 
-Compile from the command line with `javac` and run with `java`
+Simply compile from the command line with `javac` and run with `java`
 
-    javac src/loveletter/*.java src/agents/*.java 
+    mkdir bin/ && javac -d bin/ src/*/*.java
+    java -cp bin/ loveletter.LoveLetter <gamecount>
+
