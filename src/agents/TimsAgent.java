@@ -1,5 +1,7 @@
 package agents;
 
+// Created by Tim Ings 21716194 for CITS3001 Project Love Letter AI
+
 import loveletter.*;
 
 import java.util.Random;
