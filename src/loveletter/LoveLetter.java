@@ -107,9 +107,10 @@ public class LoveLetter {
 //					agents[i] = new agents.RandomAgent();
 //				}
 //			}
-			int timIndex = 3;
-			Agent[] agents = { new agents.RandomAgent(),new agents.RandomAgent(),new agents.RandomAgent(),new agents.TimsAgent() };
+			int timIndex = 2;
+			Agent[] agents = { new agents.RandomAgent(),new agents.RandomAgent(),new agents.TimsAgent(),new agents.RandomAgent() };
 //			Agent[] agents = { new agents.RandomAgent(),new agents.TimsAgent() };
+//			Agent[] agents = { new agents.TimsAgent(),new agents.RandomAgent() };
 //			Agent[] agents = { new agents.TimsAgent(), new agents.TimsAgent() };
 			LoveLetter env = new LoveLetter();
 			int[] results = env.playGame(agents);
